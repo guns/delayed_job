@@ -3,7 +3,7 @@ require 'action_mailer'
 module Delayed
   class PerformableMailer < PerformableMethod
     def perform
-      object.send(delayed_method, *args).deliver
+      object.send(method, *args).deliver
     end
   end
 end
