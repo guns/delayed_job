@@ -136,16 +136,14 @@ namespace :jobs do
         #       reap dead children before the SIGCLD handler does
         #
         # poll passenger restart file and restart on update
-        years_ago = lambda { |n| Time.now - 60 * 60 * 24 * 365 * n }
-        mtime = lambda do |file|
-          File.exists?(file) ? File.mtime(file) : years_ago.call(2)
-        end
         restart_file  = "#{rails_root}/tmp/restart.txt"
-        last_modified = mtime.call restart_file
+        last_modified = File.mtime restart_file if File.exists? restart_file
         loop do
-          if (check = mtime.call restart_file) > last_modified
-            last_modified = check
-            Process.kill :HUP, $$
+          if File.exists? restart_file
+            if (check = File.mtime restart_file) > last_modified
+              last_modified = check
+              Process.kill :HUP, $$
+            end
           end
           sleep 5
         end
