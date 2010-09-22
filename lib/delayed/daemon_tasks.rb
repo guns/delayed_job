@@ -114,6 +114,10 @@ namespace :jobs do
           Process.kill :TERM, *children.keys
         end
 
+        trap :EXIT do
+          rm_f pid_file
+        end
+
         # terminate children on user termination
         [:TERM, :INT, :QUIT].each do |sig|
           trap sig do
@@ -125,7 +129,7 @@ namespace :jobs do
             # kill the children and reap them before terminating
             Process.kill :TERM, *children.keys
             Process.waitall
-            rm_f pid_file
+            rails_logger.call "All workers have shut down."
 
             # propagate the signal like a proper process should
             Process.kill sig, $$
