@@ -60,7 +60,7 @@ namespace :jobs do
 
         # simple logger; there is some overhead due to reopening the file for
         # every write, but it's minor, and avoids headaches with open files
-        rails_logger = lambda do |msg|
+        logger = lambda do |msg|
           File.open logfile, 'a' do |f|
             f.puts "#{Time.now.strftime '%FT%T%z'}: [#{$0}] #{msg}"
           end
@@ -71,7 +71,7 @@ namespace :jobs do
         pid_file = "#{pid_dir}/#{$0}.pid"
         if File.exists? pid_file
           msg = "PID file #{pid_file} already exists!"
-          rails_logger.call msg
+          logger.call msg
           abort msg
         else
           # silence output like a proper daemon
@@ -83,7 +83,7 @@ namespace :jobs do
         # spawn the first workers
         children, times_dead = {}, {}
         worker_count = (ENV['WORKERS'] || 1).to_i
-        rails_logger.call "Spawning #{worker_count} worker(s)"
+        logger.call "Spawning #{worker_count} worker(s)"
         worker_count.times { |id| children[worker.call id, nil] = id }
 
         # and respawn the failures
@@ -96,13 +96,13 @@ namespace :jobs do
           times_dead[id].reject! { |time| now - time > 60 }
           if times_dead[id].size > 4
             delay = 60 * 5 # time to tell the children to sleep before loading
-            rails_logger.call %Q{
+            logger.call %Q{
               delayed_worker.#{id} has died four times in the past minute!
               Something is seriously wrong!
               Restarting worker in #{delay} seconds.
             }.strip.gsub /\s+/, ' '
           else
-            rails_logger.call "Restarting dead worker: delayed_worker.#{id}"
+            logger.call "Restarting dead worker: delayed_worker.#{id}"
           end
 
           children[worker.call id, delay] = id
@@ -110,17 +110,18 @@ namespace :jobs do
 
         # restart children on SIGHUP
         trap :HUP do
-          rails_logger.call 'SIGHUP received! Restarting workers.'
+          logger.call 'SIGHUP received! Restarting workers.'
           Process.kill :TERM, *children.keys
         end
 
+        # cleanup on exit
         trap :EXIT do
           rm_f pid_file
         end
 
         # terminate children on user termination
         trap :TERM do
-          rails_logger.call 'SIGTERM received! Shutting down workers.'
+          logger.call 'SIGTERM received! Shutting down workers.'
 
           # reset trap handlers so we don't get caught in a trap loop
           [:CLD, :HUP, :TERM].each { |s| trap s, 'DEFAULT' }
@@ -128,7 +129,7 @@ namespace :jobs do
           # kill the children and reap them before terminating
           Process.kill :TERM, *children.keys
           Process.waitall
-          rails_logger.call 'All workers have shut down. Exiting.'
+          logger.call 'All workers have shut down. Exiting.'
 
           # TODO: investigate why some users are reporting that
           #       `Process.kill :TERM, $$' isn't working
@@ -171,7 +172,7 @@ namespace :jobs do
             pid = File.read(pid_file).to_i
             puts "Sending #{signal} to #{pid}"
             Process.kill signal, pid
-          rescue Errno::ESRCH => e
+          rescue Errno::ESRCH => e # no such process
             abort e.to_s
           end
         end
