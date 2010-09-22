@@ -38,7 +38,7 @@ namespace :jobs do
           $0 = "delayed_worker.#{id}"
 
           # reset all inherited traps from main process
-          [:CLD, :HUP, :TERM, :INT, :QUIT].each { |sig| trap sig, 'DEFAULT' }
+          [:CLD, :HUP, :TERM].each { |sig| trap sig, 'DEFAULT' }
 
           # lay quiet for a while before booting up if specified
           sleep delay if delay
@@ -119,21 +119,20 @@ namespace :jobs do
         end
 
         # terminate children on user termination
-        [:TERM, :INT, :QUIT].each do |sig|
-          trap sig do
-            rails_logger.call "SIG#{sig} received! Shutting down workers."
+        trap :TERM do
+          rails_logger.call 'SIGTERM received! Shutting down workers.'
 
-            # reset trap handlers so we don't get caught in a trap loop
-            [:CLD, sig].each { |s| trap s, 'DEFAULT' }
+          # reset trap handlers so we don't get caught in a trap loop
+          [:CLD, :HUP, :TERM].each { |s| trap s, 'DEFAULT' }
 
-            # kill the children and reap them before terminating
-            Process.kill :TERM, *children.keys
-            Process.waitall
-            rails_logger.call "All workers have shut down."
+          # kill the children and reap them before terminating
+          Process.kill :TERM, *children.keys
+          Process.waitall
+          rails_logger.call 'All workers have shut down. Exiting.'
 
-            # propagate the signal like a proper process should
-            Process.kill sig, $$
-          end
+          # TODO: investigate why some users are reporting that
+          #       `Process.kill :TERM, $$' isn't working
+          exit
         end
 
         # NOTE: We want to block on something so that Process.waitall doesn't
