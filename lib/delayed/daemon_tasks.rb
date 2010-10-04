@@ -111,6 +111,7 @@ namespace :jobs do
         # restart children on SIGHUP
         trap :HUP do
           logger.call 'SIGHUP received! Restarting workers.'
+          times_dead.clear if times_dead # reset death log on user restart
           Process.kill :TERM, *children.keys
         end
 
