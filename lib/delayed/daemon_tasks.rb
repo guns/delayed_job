@@ -38,7 +38,7 @@ namespace :jobs do
           $0 = "delayed_worker.#{id}"
 
           # reset all inherited traps from main process
-          [:CLD, :HUP, :TERM].each { |sig| trap sig, 'DEFAULT' }
+          [:CLD, :HUP, :TERM, :EXIT].each { |sig| trap sig, 'DEFAULT' }
 
           # lay quiet for a while before booting up if specified
           sleep delay if delay

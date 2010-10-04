@@ -45,6 +45,7 @@ module Delayed
       @quiet = options.has_key?(:quiet) ? options[:quiet] : true
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
+      self.class.sleep_delay = options[:sleep_delay] if options.has_key?(:sleep_delay)
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some
@@ -80,7 +81,7 @@ module Delayed
         break if $exit
 
         if count.zero?
-          sleep(@@sleep_delay)
+          sleep(self.class.sleep_delay)
         else
           say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
         end
@@ -128,7 +129,7 @@ module Delayed
     # Uses an exponential scale depending on the number of failed attempts.
     def reschedule(job, time = nil)
       if (job.attempts += 1) < self.class.max_attempts
-        time ||= Job.db_time_now + (job.attempts ** 4) + 5
+        time ||= job.reschedule_at
         job.run_at = time
         job.unlock
         job.save!
