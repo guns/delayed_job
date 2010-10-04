@@ -7,8 +7,8 @@
 # of SIGCLD.
 #
 # We can restart worker processes by sending SIGHUP to the master process or by
-# killing them directly. Sending SIGTERM, SIGINT, or SIGQUIT to the master
-# instructs it to kill its children and terminate.
+# killing them directly. Sending SIGTERM to the master instructs it to kill its
+# children and terminate.
 #
 # Alternately, there are the tasks `jobs:daemon:restart' and `jobs:daemon:stop'
 #
