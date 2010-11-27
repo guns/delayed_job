@@ -1,19 +1,5 @@
 require 'active_record'
 
-class ActiveRecord::Base
-  yaml_as "tag:ruby.yaml.org,2002:ActiveRecord"
-
-  def self.yaml_new(klass, tag, val)
-    klass.find(val['attributes']['id'])
-  rescue ActiveRecord::RecordNotFound
-    nil
-  end
-
-  def to_yaml_properties
-    ['@attributes']
-  end
-end
-
 module Delayed
   module Backend
     module ActiveRecord
@@ -67,8 +53,10 @@ module Delayed
             self.class.update_all(["locked_at = ?", now], ["id = ? and locked_by = ?", id, worker])
           end
           if affected_rows == 1
-            self.locked_at    = now
-            self.locked_by    = worker
+            self.locked_at = now
+            self.locked_by = worker
+            self.locked_at_will_change!
+            self.locked_by_will_change!
             return true
           else
             return false
