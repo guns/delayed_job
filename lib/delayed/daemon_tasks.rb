@@ -66,19 +66,17 @@ namespace :jobs do
           end
         end
 
-        # create pidfile or abort
+        # Create / overwrite pidfile
         pid_dir  = "#{rails_root}/tmp/pids"
         pid_file = "#{pid_dir}/#{$0}.pid"
         if File.exists? pid_file
-          msg = "PID file #{pid_file} already exists!"
-          logger.call msg
-          abort msg
-        else
-          # silence output like a proper daemon
-          [$stdin, $stdout, $stderr].each { |io| io.reopen '/dev/null' }
-          mkdir_p pid_dir, :verbose => false
-          File.open(pid_file, 'w') { |f| f.write $$ }
+          logger.call "WARNING: PID file #{pid_file} already exists!"
         end
+
+        # silence output like a proper daemon
+        [$stdin, $stdout, $stderr].each { |io| io.reopen '/dev/null' }
+        mkdir_p pid_dir, :verbose => false
+        File.open(pid_file, 'w') { |f| f.write $$ }
 
         # spawn the first workers
         children, times_dead = {}, {}
